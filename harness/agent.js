@@ -5,21 +5,22 @@ export class Agent {
   constructor({ model, provider } = {}) {
     this.model = model;
     this.provider = provider;
-    // NO this.messages / history - ch-01 is stateless by design
+    this.messages = []; // the only new attribute over ch-01 - the harness owns history, not the model
   }
 
   async send(userText) {
-    const resp = await chat([{ role: "user", content: userText }], {
-      model: this.model,
-      provider: this.provider,
-    });
-    return resp.content; // the whole array is built fresh and discarded every call
+    // append, replay the whole conversation, append the reply - that loop is
+    // the entire reason the agent now feels like it remembers.
+    this.messages.push({ role: "user", content: userText });
+    const resp = await chat(this.messages, { model: this.model, provider: this.provider });
+    this.messages.push({ role: "assistant", content: resp.content });
+    return resp.content;
   }
 }
 
 export async function main() {
   const agent = new Agent();
-  console.log("agent ready (ch-01) - stateless: no history, no system prompt, no tools. Ctrl-D to exit.");
+  console.log("agent ready (ch-02) - it remembers within this session. Ctrl-D to exit.");
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: "you> " });
   rl.prompt();

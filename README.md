@@ -15,7 +15,7 @@ where this port is built up incrementally.
 |---------|-----------------------------|----------------|
 | ch-00   | What is an agent? (framing) | not ported     |
 | ch-01   | Model only — one call behind a swappable provider seam | ✅ done |
-| ch-02   | History — the harness owns the conversation | not ported |
+| ch-02   | History — the harness owns the conversation | ✅ done |
 | ch-03   | Instructions — set behavior once, prepend it every turn | not ported |
 | ch-04   | Context delivery            | not ported     |
 | ch-05   | Tools                       | not ported     |
@@ -53,8 +53,9 @@ defaults (`http://localhost:11434/v1`, `gemma4:12b`).
 ```
 npm start
 ```
-Starts the REPL. At `ch-01`, the agent is deliberately stateless — every turn is an independent
-model call, so it can't remember anything from one turn to the next. Ctrl-D to exit.
+Starts the REPL. As of `ch-02`, the harness keeps a `messages` list and replays it in full on every
+turn, so the agent remembers earlier turns within a session (the model call itself is still
+stateless — the harness is what remembers). History resets when the process exits. Ctrl-D to exit.
 
 ```
 npm test
