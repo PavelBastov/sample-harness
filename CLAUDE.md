@@ -8,10 +8,13 @@ thesis **Agent = Model + Harness**. The course is a `ch-00`..`ch-14` spine (see 
 / `README.md` for the full chapter list); this repo ports it chapter by chapter into Node.js.
 Currently implemented: `ch-01` (one model call behind a swappable provider seam), `ch-02`
 (conversation history — the harness keeps a `messages` list and replays it in full on every turn;
-the model itself is still stateless), and `ch-03` (instructions — a system prompt, assembled from an optional caller-supplied `system`
+the model itself is still stateless), `ch-03` (instructions — a system prompt, assembled from an optional caller-supplied `system`
 plus an `AGENTS.md` auto-loaded from the working directory, is prepended to every call; no
-`AGENTS.md` and no `system` means no system prompt at all). No tools or memory yet. More chapters
-are expected to land here over time, cumulatively, in the same order as the reference.
+`AGENTS.md` and no `system` means no system prompt at all), and `ch-04` (context delivery — the
+harness scans each user turn for `@path` references and injects the referenced file's contents as
+its own context message ahead of the real turn; the model never opens a file itself, it only sees
+what the harness hands it). No tools or memory yet. More chapters are expected to land here over
+time, cumulatively, in the same order as the reference.
 
 ## Working in this repo
 

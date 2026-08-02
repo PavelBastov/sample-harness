@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "ch-03 - instructions: set behavior once, prepend it every turn",
+  "description": "ch-04 - context delivery: the harness reads @path files into the prompt",
   "engines": {
     "node": ">=18.0.0"
   },

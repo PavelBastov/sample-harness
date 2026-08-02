@@ -1,5 +1,6 @@
 import readline from "node:readline";
 import { chat } from "../model/index.js";
+import { deliver } from "./context.js";
 import { loadAgentsMd } from "./instructions.js";
 
 export class Agent {
@@ -24,8 +25,12 @@ export class Agent {
   }
 
   async send(userText) {
-    // append, replay history behind the system prompt, append the reply - that
-    // loop is the entire reason the agent now feels like it remembers.
+    // inject any @path files, append the turn, replay history behind the
+    // system prompt, append the reply - that loop is the entire reason the
+    // agent now feels like it remembers.
+    for (const block of deliver(userText)) {
+      this.messages.push({ role: "user", content: `Context file:\n${block}` });
+    }
     this.messages.push({ role: "user", content: userText });
     const resp = await chat(this._payload(), { model: this.model, provider: this.provider });
     this.messages.push({ role: "assistant", content: resp.content });
@@ -35,7 +40,7 @@ export class Agent {
 
 export async function main() {
   const agent = new Agent();
-  console.log("agent ready (ch-03) - auto-loads AGENTS.md from the cwd, if present. Ctrl-D to exit.");
+  console.log("agent ready (ch-04) - reference files with @path. Ctrl-D to exit.");
 
   const rl = readline.createInterface({ input: process.stdin, output: process.stdout, prompt: "you> " });
   rl.prompt();

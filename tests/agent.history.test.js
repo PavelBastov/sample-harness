@@ -1,7 +1,23 @@
-import { test } from "node:test";
+import { test, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { Agent } from "../harness/agent.js";
 import { fake } from "../model/fake.js";
+
+// Isolate cwd so an ambient AGENTS.md can't leak a system prompt into these
+// history-only assertions.
+let prevCwd;
+
+beforeEach(() => {
+  prevCwd = process.cwd();
+  process.chdir(fs.mkdtempSync(path.join(os.tmpdir(), "sample-harness-test-")));
+});
+
+afterEach(() => {
+  process.chdir(prevCwd);
+});
 
 test("Agent.send replays the full history on every call", async () => {
   const seen = [];
