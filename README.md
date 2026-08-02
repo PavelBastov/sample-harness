@@ -18,7 +18,7 @@ where this port is built up incrementally.
 | ch-02   | History — the harness owns the conversation | ✅ done |
 | ch-03   | Instructions — set behavior once, prepend it every turn | ✅ done |
 | ch-04   | Context delivery — @path references injected into the prompt | ✅ done |
-| ch-05   | Tools                       | not ported     |
+| ch-05   | Tools — the model acts, the harness runs it | ✅ done |
 | ch-06   | Context management          | not ported     |
 | ch-07   | Skills                      | not ported     |
 | ch-08   | Execution environment       | not ported     |
@@ -60,7 +60,13 @@ an `AGENTS.md` auto-loaded from the working directory (if present) is assembled 
 once and prepended to every call, instead of being restated per turn. No `AGENTS.md` → no system
 prompt at all. As of `ch-04`, referencing `@path/to/file` anywhere in your message has the harness
 read that file and inject its contents as context ahead of your turn — the model never opens files
-itself, it only sees what the harness hands it. Ctrl-D to exit.
+itself, it only sees what the harness hands it. As of `ch-05`, the model can call tools
+(`calculator`, `read_file`, `write_file`, `edit_file`, `bash`) — the harness runs them in a bounded
+loop and feeds each result back until the model produces a final answer. `bash`/`write_file`/
+`edit_file` cross a boundary (a shell, the filesystem), so each call needs your explicit `y`/`N`
+approval at the prompt before it runs; refusing (or hitting Enter) denies it. `write_file`/
+`edit_file` operate over a scratch workspace directory that `bash` also runs in, so a shell command
+can see a file the model just wrote. Ctrl-D to exit.
 
 ```
 npm test
@@ -73,6 +79,7 @@ Runs the offline unit test suite (`node:test`) — no network calls, no dependen
   `Provider`/`Provider.fromEnv()`, the Ollama/OpenAI-compatible HTTP call, and a `fake` provider for
   offline tests.
 - `harness/` — the agent loop itself (`Agent`, `main()`), instruction assembly (`instructions.js`),
-  `@path` context delivery (`context.js`), and the agent's workspace directory (`workspace.js`).
+  `@path` context delivery (`context.js`), the tool interface (`tools.js`), the sandboxed `bash`
+  tool (`sandbox.js`), and the agent's workspace directory + file tools (`workspace.js`).
 - `bin/` — the `agent` CLI entry point.
 - `tests/` — offline tests exercising both the above.

@@ -1,18 +1,26 @@
 import { Provider, createLLMResponse } from "./provider.js";
 
+// scripted entries are usually plain content strings; returning a
+// { content, toolCalls } object instead lets a test script a tool-call
+// response, e.g. to exercise Agent's tool loop offline.
+function toResponse(value) {
+  if (value && typeof value === "object") return createLLMResponse({ finishReason: "stop", raw: { fake: true }, ...value });
+  return createLLMResponse({ content: value, finishReason: "stop", raw: { fake: true } });
+}
+
 function makeResponder({ scripted, default: defaultText = "ok" } = {}) {
   let i = 0;
   return async (messages) => {
-    let content;
+    let value;
     if (typeof scripted === "function") {
-      content = scripted(messages);
+      value = scripted(messages);
     } else if (Array.isArray(scripted) && scripted.length > 0) {
-      content = scripted[Math.min(i, scripted.length - 1)]; // consume in order, then repeat last
+      value = scripted[Math.min(i, scripted.length - 1)]; // consume in order, then repeat last
       i += 1;
     } else {
-      content = defaultText; // also covers scripted === [] (empty list)
+      value = defaultText; // also covers scripted === [] (empty list)
     }
-    return createLLMResponse({ content, finishReason: "stop", raw: { fake: true } });
+    return toResponse(value);
   };
 }
 
