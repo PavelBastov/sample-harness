@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { Agent } from "../harness/agent.js";
+import { MAX_ITEM_CHARS } from "../harness/limits.js";
 import { calculator, defaultTools, ToolRegistry } from "../harness/tools.js";
 import { fake } from "../model/fake.js";
 
@@ -42,6 +43,26 @@ test("tool call loop executes and returns", async () => {
   const toolMsgs = agent.messages.filter((m) => m.role === "tool");
   assert.equal(toolMsgs.length, 1);
   assert.equal(toolMsgs[0].content, "42");
+});
+
+test("a huge tool result is clamped at the door", async () => {
+  const reg = new ToolRegistry();
+  reg.register({
+    name: "dump",
+    description: "Return a large blob of text.",
+    parameters: { type: "object", properties: {}, required: [] },
+    func: () => "Z".repeat(MAX_ITEM_CHARS * 4),
+  });
+  const provider = fake({
+    scripted: [{ content: "", toolCalls: [{ id: "1", function: { name: "dump", arguments: "{}" } }] }, { content: "done" }],
+  });
+
+  const agent = new Agent({ provider, tools: reg });
+  await agent.send("dump it");
+
+  const toolMsg = agent.messages.find((m) => m.role === "tool");
+  assert.ok(toolMsg.content.length <= MAX_ITEM_CHARS + 100);
+  assert.match(toolMsg.content, /truncated/);
 });
 
 // --- approval gate -----------------------------------------------------------

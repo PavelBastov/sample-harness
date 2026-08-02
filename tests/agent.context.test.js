@@ -4,6 +4,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { Agent } from "../harness/agent.js";
+import { MAX_ITEM_CHARS } from "../harness/limits.js";
 import { fake } from "../model/fake.js";
 
 // Isolate cwd per test so an ambient AGENTS.md can't leak into the payload.
@@ -45,4 +46,16 @@ test("no attachment when no reference", async () => {
   await new Agent({ provider }).send("just a plain question");
 
   assert.deepEqual(seen[0], [{ role: "user", content: "just a plain question" }]);
+});
+
+test("a huge attached file is clamped at the door", async () => {
+  const f = path.join(process.cwd(), "big.txt");
+  fs.writeFileSync(f, "X".repeat(MAX_ITEM_CHARS * 4));
+  const { seen, provider } = capture();
+
+  await new Agent({ provider }).send(`@${f} summarize`);
+
+  const injected = seen[0].find((m) => m.content.includes("Context file:"));
+  assert.ok(injected.content.length <= MAX_ITEM_CHARS + 100);
+  assert.match(injected.content, /truncated/);
 });

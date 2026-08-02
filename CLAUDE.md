@@ -13,11 +13,18 @@ plus an `AGENTS.md` auto-loaded from the working directory, is prepended to ever
 `AGENTS.md` and no `system` means no system prompt at all), `ch-04` (context delivery — the
 harness scans each user turn for `@path` references and injects the referenced file's contents as
 its own context message ahead of the real turn; the model never opens a file itself, it only sees
-what the harness hands it), and `ch-05` (tools — the model returns tool calls, `Agent._run()` runs
+what the harness hands it), `ch-05` (tools — the model returns tool calls, `Agent._run()` runs
 them in a bounded loop and feeds each raw result back as a `tool` message until the model produces
 a final answer; boundary-crossing tools — `bash`, `write_file`, `edit_file` — must clear an
-`approve` callback first and fail closed with no approver wired). No memory yet. More chapters are
-expected to land here over time, cumulatively, in the same order as the reference.
+`approve` callback first and fail closed with no approver wired), and `ch-06` (context management —
+`Agent._run()` calls `_maybeCompact()` first: once the estimated history exceeds `contextLimit`
+(~tokens, default 4000), `harness/compaction.js` summarizes everything but the first 2 and last 4
+messages into one `[summary of earlier conversation]` note via its own `chat()` call, so the
+conversation stays coherent past the window instead of falling off the back; separately,
+`harness/limits.js`'s `clamp()` enforces door control — every `@path` block (`context.js`) and every
+tool result (`agent.js`) is truncated to `MAX_ITEM_CHARS` before it enters the prompt, so one huge
+file or tool output can't flood the window). No memory yet. More chapters are expected to land here
+over time, cumulatively, in the same order as the reference.
 
 ## Working in this repo
 

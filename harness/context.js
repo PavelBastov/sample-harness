@@ -5,12 +5,13 @@
 // agent injects into the prompt - turning "look at @notes.txt" into the file's
 // actual contents in the window.
 //
-// The blocks here are raw and uncapped. A huge file would flood the window;
-// that's a real problem, and door control (clamping each block) is the job of
-// a later chapter. Right now the point is just: the harness, not the model,
-// opens the file.
+// Each block is clamped (ch-06 door control): a single huge file can't be
+// allowed to flood the window, so it is truncated at the door before it ever
+// enters the prompt. The harness, not the model, opens the file - and decides
+// how much fits.
 
 import fs from "node:fs";
+import { clamp } from "./limits.js";
 
 const ATTACH = /@(\S+)/g;
 
@@ -21,7 +22,7 @@ export function deliver(userText) {
     if (fs.existsSync(p) && fs.statSync(p).isFile()) {
       try {
         const body = fs.readFileSync(p, "utf8");
-        blocks.push(`--- ${p} ---\n${body}`);
+        blocks.push(clamp(`--- ${p} ---\n${body}`));
       } catch {
         continue;
       }

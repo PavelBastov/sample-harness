@@ -19,7 +19,7 @@ where this port is built up incrementally.
 | ch-03   | Instructions — set behavior once, prepend it every turn | ✅ done |
 | ch-04   | Context delivery — @path references injected into the prompt | ✅ done |
 | ch-05   | Tools — the model acts, the harness runs it | ✅ done |
-| ch-06   | Context management          | not ported     |
+| ch-06   | Context management — compaction + door control | ✅ done |
 | ch-07   | Skills                      | not ported     |
 | ch-08   | Execution environment       | not ported     |
 | ch-09   | Durable state                | not ported     |
@@ -66,7 +66,13 @@ loop and feeds each result back until the model produces a final answer. `bash`/
 `edit_file` cross a boundary (a shell, the filesystem), so each call needs your explicit `y`/`N`
 approval at the prompt before it runs; refusing (or hitting Enter) denies it. `write_file`/
 `edit_file` operate over a scratch workspace directory that `bash` also runs in, so a shell command
-can see a file the model just wrote. Ctrl-D to exit.
+can see a file the model just wrote. As of `ch-06`, the harness manages a finite window: once the
+conversation's estimated size passes `--context-limit` (default 4000 tokens), it summarizes
+everything but the first couple and last few messages into one checkpoint note before the next
+model call, so the agent stays coherent instead of losing history to the back of the window — watch
+it happen live with a low limit, e.g. `npm start -- --context-limit 400`. Separately, every `@path`
+file and every tool result is clamped to a max size before it enters the prompt, so one huge file or
+tool output can't flood the window on its own. Ctrl-D to exit.
 
 ```
 npm test
@@ -80,6 +86,7 @@ Runs the offline unit test suite (`node:test`) — no network calls, no dependen
   offline tests.
 - `harness/` — the agent loop itself (`Agent`, `main()`), instruction assembly (`instructions.js`),
   `@path` context delivery (`context.js`), the tool interface (`tools.js`), the sandboxed `bash`
-  tool (`sandbox.js`), and the agent's workspace directory + file tools (`workspace.js`).
+  tool (`sandbox.js`), the agent's workspace directory + file tools (`workspace.js`), and context
+  management: compaction (`compaction.js`) and per-item door control (`limits.js`).
 - `bin/` — the `agent` CLI entry point.
 - `tests/` — offline tests exercising both the above.
