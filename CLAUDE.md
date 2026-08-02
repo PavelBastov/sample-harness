@@ -6,10 +6,12 @@ Node.js port of the `carbon` course (https://github.com/thecarbonlayer/carbon, c
 at `../carbon`), which builds an agent harness from scratch, one primitive per chapter, on the
 thesis **Agent = Model + Harness**. The course is a `ch-00`..`ch-14` spine (see `../carbon/AGENTS.md`
 / `README.md` for the full chapter list); this repo ports it chapter by chapter into Node.js.
-Currently implemented: `ch-01` (one model call behind a swappable provider seam) and `ch-02`
+Currently implemented: `ch-01` (one model call behind a swappable provider seam), `ch-02`
 (conversation history — the harness keeps a `messages` list and replays it in full on every turn;
-the model itself is still stateless). No system prompt, tools, or memory yet. More chapters are
-expected to land here over time, cumulatively, in the same order as the reference.
+the model itself is still stateless), and `ch-03` (instructions — a system prompt, assembled from an optional caller-supplied `system`
+plus an `AGENTS.md` auto-loaded from the working directory, is prepended to every call; no
+`AGENTS.md` and no `system` means no system prompt at all). No tools or memory yet. More chapters
+are expected to land here over time, cumulatively, in the same order as the reference.
 
 ## Working in this repo
 

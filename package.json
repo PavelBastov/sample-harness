@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "ch-02 - history: the harness owns the conversation",
+  "description": "ch-03 - instructions: set behavior once, prepend it every turn",
   "engines": {
     "node": ">=18.0.0"
   },

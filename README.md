@@ -16,7 +16,7 @@ where this port is built up incrementally.
 | ch-00   | What is an agent? (framing) | not ported     |
 | ch-01   | Model only — one call behind a swappable provider seam | ✅ done |
 | ch-02   | History — the harness owns the conversation | ✅ done |
-| ch-03   | Instructions — set behavior once, prepend it every turn | not ported |
+| ch-03   | Instructions — set behavior once, prepend it every turn | ✅ done |
 | ch-04   | Context delivery            | not ported     |
 | ch-05   | Tools                       | not ported     |
 | ch-06   | Context management          | not ported     |
@@ -55,7 +55,10 @@ npm start
 ```
 Starts the REPL. As of `ch-02`, the harness keeps a `messages` list and replays it in full on every
 turn, so the agent remembers earlier turns within a session (the model call itself is still
-stateless — the harness is what remembers). History resets when the process exits. Ctrl-D to exit.
+stateless — the harness is what remembers). History resets when the process exits. As of `ch-03`,
+an `AGENTS.md` auto-loaded from the working directory (if present) is assembled into a system prompt
+once and prepended to every call, instead of being restated per turn. No `AGENTS.md` → no system
+prompt at all. Ctrl-D to exit.
 
 ```
 npm test
@@ -67,6 +70,7 @@ Runs the offline unit test suite (`node:test`) — no network calls, no dependen
 - `model/` — the provider seam: `chat()` (the single choke point every model call goes through),
   `Provider`/`Provider.fromEnv()`, the Ollama/OpenAI-compatible HTTP call, and a `fake` provider for
   offline tests.
-- `harness/` — the agent loop itself (`Agent`, `main()`).
+- `harness/` — the agent loop itself (`Agent`, `main()`), instruction assembly (`instructions.js`),
+  and the agent's workspace directory (`workspace.js`).
 - `bin/` — the `agent` CLI entry point.
 - `tests/` — offline tests exercising both the above.
