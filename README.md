@@ -53,26 +53,30 @@ defaults (`http://localhost:11434/v1`, `gemma4:12b`).
 ```
 npm start
 ```
-Starts the REPL. As of `ch-02`, the harness keeps a `messages` list and replays it in full on every
-turn, so the agent remembers earlier turns within a session (the model call itself is still
-stateless — the harness is what remembers). History resets when the process exits. As of `ch-03`,
-an `AGENTS.md` auto-loaded from the working directory (if present) is assembled into a system prompt
-once and prepended to every call, instead of being restated per turn. No `AGENTS.md` → no system
-prompt at all. As of `ch-04`, referencing `@path/to/file` anywhere in your message has the harness
-read that file and inject its contents as context ahead of your turn — the model never opens files
-itself, it only sees what the harness hands it. As of `ch-05`, the model can call tools
-(`calculator`, `read_file`, `write_file`, `edit_file`, `bash`) — the harness runs them in a bounded
-loop and feeds each result back until the model produces a final answer. `bash`/`write_file`/
-`edit_file` cross a boundary (a shell, the filesystem), so each call needs your explicit `y`/`N`
-approval at the prompt before it runs; refusing (or hitting Enter) denies it. `write_file`/
-`edit_file` operate over a scratch workspace directory that `bash` also runs in, so a shell command
-can see a file the model just wrote. As of `ch-06`, the harness manages a finite window: once the
-conversation's estimated size passes `--context-limit` (default 4000 tokens), it summarizes
-everything but the first couple and last few messages into one checkpoint note before the next
-model call, so the agent stays coherent instead of losing history to the back of the window — watch
-it happen live with a low limit, e.g. `npm start -- --context-limit 400`. Separately, every `@path`
-file and every tool result is clamped to a max size before it enters the prompt, so one huge file or
-tool output can't flood the window on its own. Ctrl-D to exit.
+Starts the REPL (Ctrl-D to exit). Each chapter has added a capability on top of the last:
+
+- **ch-02 — History.** The harness keeps a `messages` list and replays it in full on every turn, so
+  the agent remembers earlier turns within a session (the model call itself is still stateless — the
+  harness is what remembers). History resets when the process exits.
+- **ch-03 — Instructions.** An `AGENTS.md` auto-loaded from the working directory (if present) is
+  assembled into a system prompt once and prepended to every call, instead of being restated per
+  turn. No `AGENTS.md` → no system prompt at all.
+- **ch-04 — Context delivery.** Referencing `@path/to/file` anywhere in your message has the harness
+  read that file and inject its contents as context ahead of your turn — the model never opens files
+  itself, it only sees what the harness hands it.
+- **ch-05 — Tools.** The model can call tools (`calculator`, `read_file`, `write_file`, `edit_file`,
+  `bash`) — the harness runs them in a bounded loop and feeds each result back until the model
+  produces a final answer. `bash`/`write_file`/`edit_file` cross a boundary (a shell, the
+  filesystem), so each call needs your explicit `y`/`N` approval at the prompt before it runs;
+  refusing (or hitting Enter) denies it. `write_file`/`edit_file` operate over a scratch workspace
+  directory that `bash` also runs in, so a shell command can see a file the model just wrote.
+- **ch-06 — Context management.** The harness manages a finite window: once the conversation's
+  estimated size passes `--context-limit` (default 4000 tokens), it summarizes everything but the
+  first couple and last few messages into one checkpoint note before the next model call, so the
+  agent stays coherent instead of losing history off the back of the window — watch it happen live
+  with a low limit, e.g. `npm start -- --context-limit 400`. Separately, every `@path` file and every
+  tool result is clamped to a max size before it enters the prompt, so one huge file or tool output
+  can't flood the window on its own.
 
 ```
 npm test
