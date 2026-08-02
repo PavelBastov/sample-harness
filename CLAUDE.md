@@ -23,8 +23,13 @@ messages into one `[summary of earlier conversation]` note via its own `chat()` 
 conversation stays coherent past the window instead of falling off the back; separately,
 `harness/limits.js`'s `clamp()` enforces door control — every `@path` block (`context.js`) and every
 tool result (`agent.js`) is truncated to `MAX_ITEM_CHARS` before it enters the prompt, so one huge
-file or tool output can't flood the window). No memory yet. More chapters are expected to land here
-over time, cumulatively, in the same order as the reference.
+file or tool output can't flood the window), and `ch-07` (skills — a skill is a directory under
+`skills/` holding a `SKILL.md` with YAML frontmatter (`name` + `description`) followed by a body;
+`harness/skills.js`'s `loadSkills()` reads that layout and `skillsPrompt()` advertises only each
+skill's one-line description in the system prompt, never the body — the model reads the full
+`SKILL.md` on demand with the existing `read_file` tool when a skill applies, i.e. progressive
+disclosure, the window holds a menu, not every recipe). No memory yet. More chapters are expected to
+land here over time, cumulatively, in the same order as the reference.
 
 ## Working in this repo
 

@@ -20,7 +20,7 @@ where this port is built up incrementally.
 | ch-04   | Context delivery — @path references injected into the prompt | ✅ done |
 | ch-05   | Tools — the model acts, the harness runs it | ✅ done |
 | ch-06   | Context management — compaction + door control | ✅ done |
-| ch-07   | Skills                      | not ported     |
+| ch-07   | Skills — reusable procedures the model loads on demand | ✅ done |
 | ch-08   | Execution environment       | not ported     |
 | ch-09   | Durable state                | not ported     |
 | ch-10   | Orchestration                | not ported     |
@@ -77,6 +77,12 @@ Starts the REPL (Ctrl-D to exit). Each chapter has added a capability on top of 
   with a low limit, e.g. `npm start -- --context-limit 400`. Separately, every `@path` file and every
   tool result is clamped to a max size before it enters the prompt, so one huge file or tool output
   can't flood the window on its own.
+- **ch-07 — Skills.** Any directory under `skills/` holding a `SKILL.md` (YAML frontmatter with
+  `name`/`description`, then a body) is loaded at startup and advertised in the system prompt as a
+  one-line menu entry — the body itself is never injected up front. When a skill applies, the model
+  reads the full `SKILL.md` on demand with the `read_file` tool and follows it (progressive
+  disclosure: the window holds a menu, not every recipe). Try it with `use the sign-off skill` to see
+  the model read `skills/sign-off/SKILL.md` and follow its procedure.
 
 ```
 npm test
@@ -90,7 +96,10 @@ Runs the offline unit test suite (`node:test`) — no network calls, no dependen
   offline tests.
 - `harness/` — the agent loop itself (`Agent`, `main()`), instruction assembly (`instructions.js`),
   `@path` context delivery (`context.js`), the tool interface (`tools.js`), the sandboxed `bash`
-  tool (`sandbox.js`), the agent's workspace directory + file tools (`workspace.js`), and context
-  management: compaction (`compaction.js`) and per-item door control (`limits.js`).
+  tool (`sandbox.js`), the agent's workspace directory + file tools (`workspace.js`), context
+  management: compaction (`compaction.js`) and per-item door control (`limits.js`), and skill loading
+  + prompt assembly (`skills.js`).
+- `skills/` — skill directories (`<name>/SKILL.md`) the harness advertises and the model reads on
+  demand; ships one example, `skills/sign-off/`.
 - `bin/` — the `agent` CLI entry point.
 - `tests/` — offline tests exercising both the above.

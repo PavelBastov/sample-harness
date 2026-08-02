@@ -5,6 +5,7 @@ import { deliver } from "./context.js";
 import { loadAgentsMd } from "./instructions.js";
 import { clamp } from "./limits.js";
 import { bashTool, Sandbox } from "./sandbox.js";
+import { loadSkills, skillsPrompt } from "./skills.js";
 import { defaultTools } from "./tools.js";
 import { editFileTool, Workspace, writeFileTool } from "./workspace.js";
 
@@ -21,6 +22,7 @@ export class Agent {
     approve,
     approvalRequired,
     contextLimit = DEFAULT_CONTEXT_LIMIT,
+    skills,
   } = {}) {
     this.model = model;
     this.provider = provider;
@@ -30,6 +32,7 @@ export class Agent {
     this.approve = approve;
     this.approvalRequired = approvalRequired ?? new Set();
     this.contextLimit = contextLimit;
+    this.skills = skills ?? [];
     this.messages = [];
     // Set true whenever the last turn triggered compaction - the REPL reads
     // this to surface that the window was managed (a demoable, visible event).
@@ -51,8 +54,8 @@ export class Agent {
   }
 
   _systemText() {
-    // instruction layer = optional caller-supplied system prompt + project AGENTS.md
-    return [this.system, loadAgentsMd(this.agentsDir)].filter(Boolean).join("\n\n");
+    // instruction layer = system prompt + project AGENTS.md + skills menu
+    return [this.system, loadAgentsMd(this.agentsDir), skillsPrompt(this.skills)].filter(Boolean).join("\n\n");
   }
 
   _payload() {
@@ -136,11 +139,9 @@ export async function main() {
     approve,
     approvalRequired: new Set(["bash", "write_file", "edit_file"]),
     contextLimit,
+    skills: loadSkills("skills"),
   });
-  console.log(
-    `agent ready (ch-06) - tools + an approval gate + a managed window ` +
-      `(context limit ${agent.contextLimit}). Ctrl-D to exit.`,
-  );
+  console.log("agent ready (ch-07) - tools, approval gate, managed window, skills. Ctrl-D to exit.");
   console.log(`workspace: ${workspace.root} (scratch dir, discarded on exit)`);
 
   for (;;) {

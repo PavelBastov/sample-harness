@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "ch-06 - context management: compaction + door control",
+  "description": "ch-07 - skills: reusable procedures the model loads on demand",
   "engines": {
     "node": ">=18.0.0"
   },
