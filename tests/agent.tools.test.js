@@ -3,9 +3,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { Agent } from "../harness/agent.js";
+import { Agent, tokenUsageTool } from "../harness/agent.js";
 import { MAX_ITEM_CHARS } from "../harness/limits.js";
-import { calculator, defaultTools, ToolRegistry } from "../harness/tools.js";
+import { calculator, defaultTools, readFile, ToolRegistry } from "../harness/tools.js";
 import { fake } from "../model/fake.js";
 
 // Isolate cwd so an ambient AGENTS.md can't leak a system prompt in here.
@@ -23,6 +23,35 @@ afterEach(() => {
 test("calculator tool", () => {
   assert.equal(calculator("47 * 89"), "4183");
   assert.equal(calculator("2 ** 10"), "1024");
+});
+
+// --- read_file workspace scoping (ch-08) -------------------------------------
+test("read_file blocks paths outside the workspace", () => {
+  assert.match(readFile("/etc/passwd"), /^error: path outside/);
+});
+
+test("read_file allows paths inside the workspace", () => {
+  fs.writeFileSync(path.join(process.cwd(), "notes.txt"), "hello");
+  assert.equal(readFile("notes.txt"), "hello");
+});
+
+// --- token_usage tool ---------------------------------------------------------
+test("token_usage tool reports the running total across turns", async () => {
+  const provider = fake({
+    scripted: [
+      { content: "ok", usage: { total_tokens: 100 } },
+      { content: "ok again", usage: { total_tokens: 50 } },
+    ],
+  });
+  const tools = new ToolRegistry();
+  const agent = new Agent({ provider, tools });
+  tools.register(tokenUsageTool(agent));
+
+  await agent.send("hi");
+  await agent.send("hi again");
+
+  assert.equal(agent.totalTokens, 150);
+  assert.match(await tools.call("token_usage", "{}"), /150/);
 });
 
 test("tool call loop executes and returns", async () => {

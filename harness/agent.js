@@ -9,7 +9,7 @@ import { loadSkills, skillsPrompt } from "./skills.js";
 import { defaultTools } from "./tools.js";
 import { editFileTool, Workspace, writeFileTool } from "./workspace.js";
 
-const MAX_TOOL_STEPS = 6;
+const MAX_TOOL_STEPS = 50;
 const DEFAULT_CONTEXT_LIMIT = 4000; // ~tokens; compact the history above this
 
 export class Agent {
@@ -33,6 +33,8 @@ export class Agent {
     this.approvalRequired = approvalRequired ?? new Set();
     this.contextLimit = contextLimit;
     this.skills = skills ?? [];
+    this._lastTokens = 0; // model-reported usage from the last call (ch-08)
+    this.totalTokens = 0; // running sum of model-reported usage across the whole conversation
     this.messages = [];
     // Set true whenever the last turn triggered compaction - the REPL reads
     // this to surface that the window was managed (a demoable, visible event).
@@ -45,10 +47,12 @@ export class Agent {
   }
 
   async _maybeCompact() {
-    // Estimate the window cheaply; compact only when it overruns the budget.
+    // ch-08: prefer the model's reported usage; fall back to an estimate on turn one.
     this.justCompacted = false;
-    if (estimateTokens(this.messages) > this.contextLimit) {
+    const window = this._lastTokens || estimateTokens(this.messages);
+    if (window > this.contextLimit) {
       this.messages = await compact(this.messages, { model: this.model, provider: this.provider });
+      this._lastTokens = 0; // recomputed from the next response
       this.justCompacted = true;
     }
   }
@@ -80,6 +84,9 @@ export class Agent {
     const specs = this.tools ? this.tools.specs() : undefined;
     for (let step = 0; step < MAX_TOOL_STEPS; step++) {
       const resp = await chat(this._payload(), { model: this.model, tools: specs, provider: this.provider });
+      const reportedTokens = Number(resp.usage?.total_tokens ?? 0);
+      this._lastTokens = reportedTokens || this._lastTokens;
+      this.totalTokens += reportedTokens;
       if (resp.toolCalls?.length && this.tools) {
         this.messages.push({ role: "assistant", content: resp.content ?? "", tool_calls: resp.toolCalls });
         for (const tc of resp.toolCalls) {
@@ -100,6 +107,21 @@ export class Agent {
     }
     return "error: exceeded tool-step budget";
   }
+}
+
+// A read-only introspection tool: reports the running token total tracked on
+// `agent` (see Agent._run). Not part of the ported chapters - a small addition
+// so the model (or the user, by asking it to check) can see session cost.
+export function tokenUsageTool(agent) {
+  return {
+    name: "token_usage",
+    description:
+      "Report cumulative token spend across this session (sum of every call's reported usage, " +
+        "not the current context window size — history is resent in full each call, so this " +
+        "total is not what drives compaction).",
+    parameters: { type: "object", properties: {}, required: [] },
+    func: () => `${agent.totalTokens} tokens consumed so far in this conversation.`,
+  };
 }
 
 function parseContextLimit(argv) {
@@ -141,7 +163,8 @@ export async function main() {
     contextLimit,
     skills: loadSkills("skills"),
   });
-  console.log("agent ready (ch-07) - tools, approval gate, managed window, skills. Ctrl-D to exit.");
+  tools.register(tokenUsageTool(agent)); // registered after construction - it reads agent.totalTokens live
+  console.log("agent ready (ch-08) - sandboxed tools, approval gate, managed window, skills. Ctrl-D to exit.");
   console.log(`workspace: ${workspace.root} (scratch dir, discarded on exit)`);
 
   for (;;) {

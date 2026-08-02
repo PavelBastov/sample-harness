@@ -21,7 +21,7 @@ where this port is built up incrementally.
 | ch-05   | Tools — the model acts, the harness runs it | ✅ done |
 | ch-06   | Context management — compaction + door control | ✅ done |
 | ch-07   | Skills — reusable procedures the model loads on demand | ✅ done |
-| ch-08   | Execution environment       | not ported     |
+| ch-08   | Execution environment — a hardened sandbox boundary | ✅ done |
 | ch-09   | Durable state                | not ported     |
 | ch-10   | Orchestration                | not ported     |
 | ch-11   | Subagents                    | not ported     |
@@ -83,6 +83,18 @@ Starts the REPL (Ctrl-D to exit). Each chapter has added a capability on top of 
   reads the full `SKILL.md` on demand with the `read_file` tool and follows it (progressive
   disclosure: the window holds a menu, not every recipe). Try it with `use the sign-off skill` to see
   the model read `skills/sign-off/SKILL.md` and follow its procedure.
+- **ch-08 — Execution environment.** The `bash` sandbox is hardened: with Docker available, commands
+  run with `--network none`, as a non-root user, with capabilities dropped and a read-only
+  filesystem; without Docker, the local fallback runs with a scrubbed environment (no inherited
+  credentials) in a fresh workdir, so a command can't read your shell's secrets. `read_file` is now
+  confined to the working directory — no more reading `/etc/passwd`. Compaction (ch-06) also gets
+  more accurate: instead of only estimating the window from character counts, the harness prefers the
+  model's own reported token usage once a call has been made.
+- **`token_usage` tool** (not part of the ported chapters). Reports cumulative token spend across
+  the session — the sum of every call's reported usage — not the current context window size;
+  since the full history is resent on every call, this total isn't what drives compaction (ch-06
+  checks the size of the most recent call instead). Ask the agent something like `how many tokens
+  have we used?`.
 
 ```
 npm test
@@ -95,10 +107,11 @@ Runs the offline unit test suite (`node:test`) — no network calls, no dependen
   `Provider`/`Provider.fromEnv()`, the Ollama/OpenAI-compatible HTTP call, and a `fake` provider for
   offline tests.
 - `harness/` — the agent loop itself (`Agent`, `main()`), instruction assembly (`instructions.js`),
-  `@path` context delivery (`context.js`), the tool interface (`tools.js`), the sandboxed `bash`
-  tool (`sandbox.js`), the agent's workspace directory + file tools (`workspace.js`), context
-  management: compaction (`compaction.js`) and per-item door control (`limits.js`), and skill loading
-  + prompt assembly (`skills.js`).
+  `@path` context delivery (`context.js`), the tool interface (`tools.js`), the hardened `bash`
+  sandbox (`sandbox.js`), the agent's workspace directory + file tools (`workspace.js`), context
+  management: compaction (`compaction.js`) and per-item door control (`limits.js`), skill loading +
+  prompt assembly (`skills.js`), and verification helpers not yet wired into the loop
+  (`verification.js`).
 - `skills/` — skill directories (`<name>/SKILL.md`) the harness advertises and the model reads on
   demand; ships one example, `skills/sign-off/`.
 - `bin/` — the `agent` CLI entry point.

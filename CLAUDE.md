@@ -28,8 +28,16 @@ file or tool output can't flood the window), and `ch-07` (skills — a skill is 
 `harness/skills.js`'s `loadSkills()` reads that layout and `skillsPrompt()` advertises only each
 skill's one-line description in the system prompt, never the body — the model reads the full
 `SKILL.md` on demand with the existing `read_file` tool when a skill applies, i.e. progressive
-disclosure, the window holds a menu, not every recipe). No memory yet. More chapters are expected to
-land here over time, cumulatively, in the same order as the reference.
+disclosure, the window holds a menu, not every recipe), and `ch-08` (execution environment —
+`harness/sandbox.js`'s `Sandbox` is hardened: the Docker path adds `--network none`, a non-root
+user, dropped capabilities, and a read-only filesystem; the local fallback runs with a scrubbed env
+(no inherited credentials) in a fresh workdir. `readFile()` in `tools.js` is now confined to the
+current working directory — no more reading `/etc/passwd`. `Agent._run()` captures the model's
+reported `usage.total_tokens` into `_lastTokens`, and `_maybeCompact()` prefers that real number over
+`estimateTokens()`'s character-count guess, falling back to the estimate only on turn one. New
+`harness/verification.js` runs candidate code in the same scrubbed-env, scoped-workdir posture —
+introduced now because the sandbox work needs it, wired into the loop only at ch-12). No memory yet.
+More chapters are expected to land here over time, cumulatively, in the same order as the reference.
 
 ## Working in this repo
 
@@ -66,3 +74,9 @@ land here over time, cumulatively, in the same order as the reference.
   `node:assert` cover testing. This mirrors the Python reference's minimalism (its only dependency
   is `httpx`) — don't add a library (`dotenv`, `axios`, a test framework) without a clear reason as
   the port grows.
+- **`harness/verification.js` runs JS, not Python.** The reference's `verification.py` shells out to
+  `sys.executable` to run candidate *Python* code, since that's the reference's own implementation
+  language. This port's harness is JS, so the natural analog is running candidate *JavaScript* via
+  `node` (same scrubbed-env, scoped-workdir posture, same not-wired-in-until-ch-12 status) — a
+  deliberate language-appropriate adaptation, not a literal transliteration, in the same spirit as
+  `calculator()` reimplementing arithmetic natively instead of porting Python's `eval`-avoidance verbatim.

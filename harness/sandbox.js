@@ -1,24 +1,27 @@
-// Execution environment - the harness runs code, the model never does.
+// Execution environment (ch-08) - the harness runs code, the model never does.
 //
-// When a tool shells out, the command runs inside this sandbox, not on the
-// host shell. The model only ever sees the captured stdout/stderr and exit
-// code.
+// The model only ever asks; the harness executes, inside a boundary. The
+// sandbox prefers hardened Docker (--network none, non-root, scoped workdir)
+// and falls back to a scoped local subprocess when no Docker daemon is
+// available.
 //
-// This is the minimal form: it prefers Docker (an isolated container) and
-// falls back to a local subprocess when no Docker daemon is around. Give it a
-// workdir and the command runs in that persistent directory - so a bash
-// command can see a file a write tool just created (the workspace seam)
-// instead of a throwaway dir.
+// "Start closed": no network, a fresh isolated workdir, and a scrubbed
+// environment (no inherited credentials), so untrusted code never sees the
+// host's secrets. The sandbox is the backstop, not the only defense.
 //
-// The real boundary - no network, a non-root user, a scrubbed environment
-// with no inherited credentials - is the hardening that lands at ch-08. Here
-// the point is just the seam: code execution goes through one chokepoint the
-// harness controls.
+// The seam was introduced minimal at ch-05 (one chokepoint for code
+// execution); this is the hardening - the boundary that makes that chokepoint
+// trustworthy. Give it a workdir and the command runs in that persistent
+// directory, so a bash command can see a file a write tool just created (the
+// workspace seam).
 
 import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+
+// Minimal environment handed to sandboxed commands - note the absence of secrets.
+const SCRUBBED_ENV = { PATH: "/usr/bin:/bin:/usr/sbin:/sbin", LC_ALL: "C" };
 
 export class Sandbox {
   constructor({ image = "busybox", timeoutMs = 15000, preferDocker = true } = {}) {
@@ -47,15 +50,42 @@ export class Sandbox {
   }
 
   _runDocker(command, workdir) {
+    // Hardened: no network, non-root, capabilities dropped, writable only in
+    // /work. /work is a throwaway tmpfs unless a workspace is bind-mounted.
     const mount = workdir ? ["-v", `${workdir}:/work`] : ["--tmpfs", "/work:rw,size=16m"];
-    const argv = ["run", "--rm", ...mount, "-w", "/work", this.image, "sh", "-c", command];
+    const argv = [
+      "run",
+      "--rm",
+      "--network",
+      "none",
+      "--user",
+      "65534:65534",
+      "--cap-drop",
+      "ALL",
+      "--memory",
+      "256m",
+      "--pids-limit",
+      "128",
+      "--read-only",
+      ...mount,
+      "-w",
+      "/work",
+      this.image,
+      "sh",
+      "-c",
+      command,
+    ];
     const proc = spawnSync("docker", argv, { encoding: "utf8", timeout: this.timeoutMs });
     return { stdout: proc.stdout ?? "", stderr: proc.stderr ?? "", exitCode: proc.status ?? -1, backend: "docker" };
   }
 
   _runLocal(command, workdir) {
+    // Fallback: scrubbed env + timeout. Uses the persistent workspace if
+    // given, else a fresh throwaway dir. (network is NOT isolated here - that
+    // needs Docker.)
     const cwd = workdir ?? fs.mkdtempSync(path.join(os.tmpdir(), "sandbox-"));
-    const proc = spawnSync("bash", ["-c", command], { cwd, encoding: "utf8", timeout: this.timeoutMs });
+    const env = { ...SCRUBBED_ENV, HOME: cwd, TMPDIR: cwd };
+    const proc = spawnSync("bash", ["-c", command], { cwd, env, encoding: "utf8", timeout: this.timeoutMs });
     return { stdout: proc.stdout ?? "", stderr: proc.stderr ?? "", exitCode: proc.status ?? -1, backend: "local" };
   }
 }

@@ -8,11 +8,13 @@
 //
 // Tools are an API surface you expose to a model: keep the list small, keep
 // each contract narrow, and validate arguments. calculator() evaluates
-// arithmetic without eval; readFile() returns a file's contents. (readFile is
-// unscoped here - it can read any path. Confining tools to a workspace is the
-// execution-environment concern of ch-08.)
+// arithmetic without eval; readFile() returns a file's contents - and as of
+// ch-08 it is confined to the workspace: a model-invoked tool must not wander
+// the host filesystem, so paths are resolved and must live under the working
+// directory.
 
 import fs from "node:fs";
+import path from "node:path";
 
 const TOKEN_RE = /\s*(\*\*|\d+(?:\.\d+)?|[()+\-*/%])/y;
 
@@ -96,9 +98,15 @@ export function calculator(expression) {
 }
 
 export function readFile(filePath) {
-  return fs.existsSync(filePath) && fs.statSync(filePath).isFile()
-    ? fs.readFileSync(filePath, "utf8")
-    : `error: no such file: ${filePath}`;
+  // Confined to the workspace (ch-08 hardening): the model-invoked tool must
+  // not wander the host filesystem (no /etc/passwd). Paths are resolved and
+  // must live under the current working directory.
+  const root = path.resolve(process.cwd());
+  const p = path.resolve(filePath);
+  if (p !== root && !p.startsWith(root + path.sep)) {
+    return `error: path outside workspace: ${filePath}`;
+  }
+  return fs.existsSync(p) && fs.statSync(p).isFile() ? fs.readFileSync(p, "utf8") : `error: no such file: ${filePath}`;
 }
 
 export class ToolRegistry {
